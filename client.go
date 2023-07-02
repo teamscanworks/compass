@@ -4,21 +4,21 @@ import (
 	"fmt"
 	"sync"
 
+	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
 	cclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
-	"google.golang.org/grpc"
-
-	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 )
 
 type Client struct {
-	log  *zap.Logger
-	cfg  *ClientConfig
-	RPC  *rpchttp.HTTP
-	GRPC *grpc.ClientConn
-
-	initFn sync.Once
+	log     *zap.Logger
+	cfg     *ClientConfig
+	RPC     *rpchttp.HTTP
+	GRPC    *grpc.ClientConn
+	Keyring keyring.Keyring
+	initFn  sync.Once
 }
 
 func NewClient(log *zap.Logger, cfg *ClientConfig) (*Client, error) {
@@ -41,6 +41,11 @@ func (c *Client) Initialize() error {
 			initErr = fmt.Errorf("invalid client object: no config")
 			return
 		}
+		keyInfo, err := keyring.New(c.cfg.ChainID, c.cfg.KeyringBackend, c.cfg.KeyDirectory, nil, nil)
+		if err != nil {
+			initErr = fmt.Errorf("failed to initialize keyring %s", err)
+			return
+		}
 		rpc, err := cclient.NewClientFromNode(c.cfg.RPCAddr)
 		if err != nil {
 			initErr = fmt.Errorf("failed to construct client from node %s", err)
@@ -61,6 +66,7 @@ func (c *Client) Initialize() error {
 
 		c.RPC = rpc
 		c.GRPC = grpcConn
+		c.Keyring = keyInfo
 	})
 
 	return initErr

@@ -1,6 +1,6 @@
 # Compass
 
-Lightweight cosmos RPC/gRPC client for easier application development.
+Lightweight cosmos RPC/gRPC client for easier application development, largely based off of the [lens client](https://github.com/strangelove-ventures/lens/tree/main/client)
 
 # Testing
 

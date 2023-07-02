@@ -76,3 +76,22 @@ func GetOsmosisConfig(keyHome string, debug bool) *ClientConfig {
 		SignModeStr:    "direct",
 	}
 }
+
+func GetSimdConfig() *ClientConfig {
+	return &ClientConfig{
+		Key:            "default",
+		ChainID:        "cosmoshub-4",
+		RPCAddr:        "tcp://127.0.0.1:26657",
+		GRPCAddr:       "127.0.0.1:9090",
+		AccountPrefix:  "cosmos",
+		KeyringBackend: "test",
+		GasAdjustment:  1.2,
+		GasPrices:      "0.01uatom",
+		MinGasAmount:   0,
+		KeyDirectory:   "keyring-test",
+		Debug:          true,
+		Timeout:        "20s",
+		OutputFormat:   "json",
+		SignModeStr:    "direct",
+	}
+}
