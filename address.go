@@ -9,25 +9,11 @@ import (
 func (cc *Client) EncodeBech32AccAddr(addr sdk.AccAddress) (string, error) {
 	return sdk.Bech32ifyAddressBytes(cc.cfg.AccountPrefix, addr)
 }
-func (cc *Client) MustEncodeAccAddr(addr sdk.AccAddress) string {
-	enc, err := cc.EncodeBech32AccAddr(addr)
-	if err != nil {
-		panic(err)
-	}
-	return enc
-}
 func (cc *Client) EncodeBech32AccPub(addr sdk.AccAddress) (string, error) {
 	return sdk.Bech32ifyAddressBytes(fmt.Sprintf("%s%s", cc.cfg.AccountPrefix, "pub"), addr)
 }
 func (cc *Client) EncodeBech32ValAddr(addr sdk.ValAddress) (string, error) {
 	return sdk.Bech32ifyAddressBytes(fmt.Sprintf("%s%s", cc.cfg.AccountPrefix, "valoper"), addr)
-}
-func (cc *Client) MustEncodeValAddr(addr sdk.ValAddress) string {
-	enc, err := cc.EncodeBech32ValAddr(addr)
-	if err != nil {
-		panic(err)
-	}
-	return enc
 }
 func (cc *Client) EncodeBech32ValPub(addr sdk.AccAddress) (string, error) {
 	return sdk.Bech32ifyAddressBytes(fmt.Sprintf("%s%s", cc.cfg.AccountPrefix, "valoperpub"), addr)
