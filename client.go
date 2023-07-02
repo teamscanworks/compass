@@ -73,6 +73,7 @@ func (c *Client) Initialize() error {
 		c.GRPC = grpcConn
 		c.Keyring = keyInfo
 		c.Codec = MakeCodec(c.cfg.Modules, []string{})
+		c.log.Info("initialized client")
 	})
 
 	return initErr
