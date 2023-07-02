@@ -6,8 +6,10 @@ import (
 
 	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
 	cclient "github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
@@ -18,7 +20,10 @@ type Client struct {
 	RPC     *rpchttp.HTTP
 	GRPC    *grpc.ClientConn
 	Keyring keyring.Keyring
-	initFn  sync.Once
+
+	Codec Codec
+
+	initFn sync.Once
 }
 
 func NewClient(log *zap.Logger, cfg *ClientConfig) (*Client, error) {
@@ -67,7 +72,18 @@ func (c *Client) Initialize() error {
 		c.RPC = rpc
 		c.GRPC = grpcConn
 		c.Keyring = keyInfo
+		c.Codec = MakeCodec(c.cfg.Modules, []string{})
 	})
 
 	return initErr
+}
+
+func (c *Client) TxFactory() tx.Factory {
+	return tx.Factory{}.
+		WithAccountRetriever(c).
+		WithChainID(c.cfg.ChainID).
+		WithGasAdjustment(c.cfg.GasAdjustment).
+		WithGasPrices(c.cfg.GasPrices).
+		WithKeybase(c.Keyring).
+		WithSignMode(signing.SignMode_SIGN_MODE_DIRECT)
 }
