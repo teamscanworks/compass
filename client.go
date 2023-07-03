@@ -23,7 +23,8 @@ type Client struct {
 
 	Codec Codec
 
-	initFn sync.Once
+	initFn  sync.Once
+	closeFn sync.Once
 }
 
 func NewClient(log *zap.Logger, cfg *ClientConfig) (*Client, error) {
@@ -33,6 +34,18 @@ func NewClient(log *zap.Logger, cfg *ClientConfig) (*Client, error) {
 		cfg: cfg,
 	}
 	return rpc, rpc.Initialize()
+}
+
+func (c *Client) Close() error {
+	var closeErr error = fmt.Errorf("client already close")
+	c.closeFn.Do(func() {
+		if closeErr = c.GRPC.Close(); closeErr != nil {
+			return
+		}
+		closeErr = nil
+
+	})
+	return closeErr
 }
 
 func (c *Client) Initialize() error {
