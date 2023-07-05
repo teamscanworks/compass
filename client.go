@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
+	"github.com/cosmos/cosmos-sdk/client"
 	cclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -100,4 +101,8 @@ func (c *Client) TxFactory() tx.Factory {
 		WithGasPrices(c.cfg.GasPrices).
 		WithKeybase(c.Keyring).
 		WithSignMode(signing.SignMode_SIGN_MODE_DIRECT)
+}
+
+func (c *Client) ClientContext() client.Context {
+	return client.Context{}.WithViper("breaker").WithKeyring(c.Keyring).WithGRPCClient(c.GRPC)
 }
