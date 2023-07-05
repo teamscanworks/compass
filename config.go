@@ -4,6 +4,8 @@ import (
 	"path"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types/module"
 )
 
@@ -109,4 +111,12 @@ func GetSimdConfig() *ClientConfig {
 	}
 	cfg.SetKeysDir("keyring-test")
 	return cfg
+}
+
+// returns a keyring.Option that specifies a list of supported algorithms
+func DefaultSignatureOptions() keyring.Option {
+	return func(options *keyring.Options) {
+		options.SupportedAlgos = keyring.SigningAlgoList{hd.Secp256k1}
+		options.SupportedAlgosLedger = keyring.SigningAlgoList{hd.Secp256k1}
+	}
 }

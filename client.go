@@ -29,13 +29,13 @@ type Client struct {
 	closeFn sync.Once
 }
 
-func NewClient(log *zap.Logger, cfg *ClientConfig) (*Client, error) {
+func NewClient(log *zap.Logger, cfg *ClientConfig, keyringOptions []keyring.Option) (*Client, error) {
 	logger := log.Named("compass")
 	rpc := &Client{
 		log: logger,
 		cfg: cfg,
 	}
-	return rpc, rpc.Initialize()
+	return rpc, rpc.Initialize(keyringOptions)
 }
 
 func (c *Client) Close() error {
@@ -50,7 +50,7 @@ func (c *Client) Close() error {
 	return closeErr
 }
 
-func (c *Client) Initialize() error {
+func (c *Client) Initialize(keyringOptions []keyring.Option) error {
 	var initErr error = nil
 	c.initFn.Do(func() {
 		if c.log == nil {
@@ -61,7 +61,7 @@ func (c *Client) Initialize() error {
 			initErr = fmt.Errorf("invalid client object: no config")
 			return
 		}
-		keyInfo, err := keyring.New(c.cfg.ChainID, c.cfg.KeyringBackend, c.cfg.KeyDirectory, os.Stdin, c.Codec.Marshaler)
+		keyInfo, err := keyring.New(c.cfg.ChainID, c.cfg.KeyringBackend, c.cfg.KeyDirectory, os.Stdin, c.Codec.Marshaler, keyringOptions...)
 		if err != nil {
 			initErr = fmt.Errorf("failed to initialize keyring %s", err)
 			return

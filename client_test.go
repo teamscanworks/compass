@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/stretchr/testify/require"
 	"github.com/teamscanworks/compass"
 	"go.uber.org/zap"
@@ -14,7 +15,7 @@ func TestClient(t *testing.T) {
 	require.NoError(t, err)
 	cfg := compass.GetSimdConfig()
 	require.NotNil(t, cfg)
-	client, err := compass.NewClient(logger, cfg)
+	client, err := compass.NewClient(logger, cfg, []keyring.Option{compass.DefaultSignatureOptions()})
 	require.NoError(t, err)
 	require.NotNil(t, client.GRPC)
 	require.NotNil(t, client.RPC)
