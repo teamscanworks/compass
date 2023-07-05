@@ -7,6 +7,27 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	"github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/cosmos/cosmos-sdk/x/crisis"
+	"github.com/cosmos/cosmos-sdk/x/distribution"
+	"github.com/cosmos/cosmos-sdk/x/gov"
+	"github.com/cosmos/cosmos-sdk/x/params"
+	"github.com/cosmos/cosmos-sdk/x/slashing"
+	"github.com/cosmos/cosmos-sdk/x/staking"
+)
+
+var (
+	ModuleBasics = []module.AppModuleBasic{
+		bank.AppModuleBasic{},
+		// TODO: add osmosis governance proposal types here
+		// TODO: add other proposal types here
+		gov.NewAppModuleBasic(nil),
+		crisis.AppModuleBasic{},
+		distribution.AppModuleBasic{},
+		params.AppModuleBasic{},
+		slashing.AppModuleBasic{},
+		staking.AppModuleBasic{},
+	}
 )
 
 type ClientConfig struct {
