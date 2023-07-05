@@ -60,7 +60,7 @@ func (c *Client) Initialize() error {
 			initErr = fmt.Errorf("invalid client object: no config")
 			return
 		}
-		keyInfo, err := keyring.New(c.cfg.ChainID, c.cfg.KeyringBackend, c.cfg.KeyDirectory, nil, nil)
+		keyInfo, err := keyring.New(c.cfg.ChainID, c.cfg.KeyringBackend, c.cfg.KeyDirectory, nil, c.Codec.Marshaler)
 		if err != nil {
 			initErr = fmt.Errorf("failed to initialize keyring %s", err)
 			return
