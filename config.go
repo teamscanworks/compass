@@ -7,6 +7,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	"github.com/cosmos/cosmos-sdk/x/distribution"
@@ -18,6 +19,7 @@ import (
 
 var (
 	ModuleBasics = []module.AppModuleBasic{
+		auth.AppModuleBasic{},
 		bank.AppModuleBasic{},
 		// TODO: add osmosis governance proposal types here
 		// TODO: add other proposal types here
