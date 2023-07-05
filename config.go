@@ -1,6 +1,7 @@
 package compass
 
 import (
+	"path"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -39,8 +40,16 @@ func (ccc *ClientConfig) Validate() error {
 	return nil
 }
 
+func (ccc *ClientConfig) FormatKeysDir(home string) string {
+	return path.Join(home, "keys", ccc.ChainID)
+}
+
+func (ccc *ClientConfig) SetKeysDir(home string) {
+	ccc.KeyDirectory = ccc.FormatKeysDir(home)
+}
+
 func GetCosmosHubConfig(keyHome string, debug bool) *ClientConfig {
-	return &ClientConfig{
+	cfg := &ClientConfig{
 		Key:            "default",
 		ChainID:        "cosmoshub-4",
 		RPCAddr:        "https://cosmoshub-4.technofractal.com:443",
@@ -56,10 +65,12 @@ func GetCosmosHubConfig(keyHome string, debug bool) *ClientConfig {
 		OutputFormat:   "json",
 		SignModeStr:    "direct",
 	}
+	cfg.SetKeysDir(keyHome)
+	return cfg
 }
 
 func GetOsmosisConfig(keyHome string, debug bool) *ClientConfig {
-	return &ClientConfig{
+	cfg := &ClientConfig{
 		Key:            "default",
 		ChainID:        "osmosis-1",
 		RPCAddr:        "https://osmosis-1.technofractal.com:443",
@@ -75,10 +86,12 @@ func GetOsmosisConfig(keyHome string, debug bool) *ClientConfig {
 		OutputFormat:   "json",
 		SignModeStr:    "direct",
 	}
+	cfg.SetKeysDir(keyHome)
+	return cfg
 }
 
 func GetSimdConfig() *ClientConfig {
-	return &ClientConfig{
+	cfg := &ClientConfig{
 		Key:            "default",
 		ChainID:        "cosmoshub-4",
 		RPCAddr:        "tcp://127.0.0.1:26657",
@@ -94,4 +107,6 @@ func GetSimdConfig() *ClientConfig {
 		OutputFormat:   "json",
 		SignModeStr:    "direct",
 	}
+	cfg.SetKeysDir("keyring-test")
+	return cfg
 }
