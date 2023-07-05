@@ -104,5 +104,10 @@ func (c *Client) TxFactory() tx.Factory {
 }
 
 func (c *Client) ClientContext() client.Context {
-	return client.Context{}.WithViper("breaker").WithKeyring(c.Keyring).WithGRPCClient(c.GRPC)
+	return client.Context{}.
+		WithViper("breaker").
+		WithAccountRetriever(c).
+		WithChainID(c.cfg.ChainID).
+		WithKeyring(c.Keyring).
+		WithGRPCClient(c.GRPC)
 }
