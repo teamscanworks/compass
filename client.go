@@ -111,5 +111,6 @@ func (c *Client) ClientContext() client.Context {
 		WithAccountRetriever(c).
 		WithChainID(c.cfg.ChainID).
 		WithKeyring(c.Keyring).
-		WithGRPCClient(c.GRPC)
+		WithGRPCClient(c.GRPC).
+		WithCodec(c.Codec.Marshaler)
 }
