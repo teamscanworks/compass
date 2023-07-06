@@ -35,6 +35,8 @@ func NewClient(log *zap.Logger, cfg *ClientConfig, keyringOptions []keyring.Opti
 		log: logger,
 		cfg: cfg,
 	}
+	// set codecs
+	rpc.Codec = MakeCodec(rpc.cfg.Modules, []string{})
 	return rpc, rpc.Initialize(keyringOptions)
 }
 
@@ -87,7 +89,6 @@ func (c *Client) Initialize(keyringOptions []keyring.Option) error {
 		c.RPC = rpc
 		c.GRPC = grpcConn
 		c.Keyring = keyInfo
-		c.Codec = MakeCodec(c.cfg.Modules, []string{})
 		c.log.Info("initialized client")
 	})
 
