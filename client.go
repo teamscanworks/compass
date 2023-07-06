@@ -78,7 +78,7 @@ func (c *Client) Initialize(keyringOptions []keyring.Option) error {
 			grpc.WithInsecure(), // The Cosmos SDK doesn't support any transport security mechanism.
 			// This instantiates a general gRPC codec which handles proto bytes. We pass in a nil interface registr
 			// if the request/response types contain interface instead of 'nil' you should pass the application spe
-			//grpc.WithDefaultCallOptions(grpc.ForceCodec(codec.NewProtoCodec(c.Codec.InterfaceRegistry).GRPCCodec())),
+			//grpc.WithDefaultCallOptions(grpc.ForceCodec(codec.NewProtoCodec(nil).GRPCCodec())),
 		)
 		if err != nil {
 			initErr = fmt.Errorf("failed to dial grpc server node %s", err)
@@ -112,6 +112,5 @@ func (c *Client) ClientContext() client.Context {
 		WithKeyring(c.Keyring).
 		WithGRPCClient(c.GRPC).
 		WithClient(c.RPC).
-		WithCodec(c.Codec.Marshaler).
-		WithInterfaceRegistry(c.Codec.InterfaceRegistry)
+		WithCodec(c.Codec.Marshaler)
 }
