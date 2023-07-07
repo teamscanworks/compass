@@ -4,6 +4,8 @@ import (
 	"path"
 	"time"
 
+	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
+
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	authz "github.com/cosmos/cosmos-sdk/x/authz/module"
@@ -11,6 +13,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	"github.com/cosmos/cosmos-sdk/x/distribution"
 	"github.com/cosmos/cosmos-sdk/x/gov"
+	"github.com/cosmos/cosmos-sdk/x/gov/client"
 	"github.com/cosmos/cosmos-sdk/x/mint"
 	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
@@ -25,7 +28,9 @@ var (
 		bank.AppModuleBasic{},
 		// TODO: add osmosis governance proposal types here
 		// TODO: add other proposal types here
-		gov.NewAppModuleBasic(nil),
+		gov.NewAppModuleBasic([]client.ProposalHandler{
+			paramsclient.ProposalHandler,
+		}),
 		crisis.AppModuleBasic{},
 		distribution.AppModuleBasic{},
 		mint.AppModuleBasic{},
