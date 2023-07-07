@@ -47,8 +47,8 @@ func (cc *Client) GetAccountWithHeight(clientCtx client.Context, addr sdk.AccAdd
 		return nil, 0, fmt.Errorf("failed to parse block height: %w", err)
 	}
 
-	var acc authtypes.AccountI
-	// TODO: add codec
+	var acc sdk.AccountI
+
 	if err := cc.Codec.InterfaceRegistry.UnpackAny(res.Account, &acc); err != nil {
 		return nil, 0, err
 	}

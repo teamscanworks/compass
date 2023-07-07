@@ -15,6 +15,7 @@ import (
 	"google.golang.org/grpc"
 )
 
+// Client provides a lightweight RPC/gRPC client for interacting with the cosmos blockchain, and is a fork of https://github.com/strangelove-ventures/lens
 type Client struct {
 	log     *zap.Logger
 	cfg     *ClientConfig
@@ -28,17 +29,18 @@ type Client struct {
 	closeFn sync.Once
 }
 
+// Returns a new compass client used to interact with the cosmos blockchain
 func NewClient(log *zap.Logger, cfg *ClientConfig, keyringOptions []keyring.Option) (*Client, error) {
 	logger := log.Named("compass")
 	rpc := &Client{
-		log: logger,
-		cfg: cfg,
+		log:   logger,
+		cfg:   cfg,
+		Codec: MakeCodec(cfg.Modules, []string{}),
 	}
-	// set codecs
-	rpc.Codec = MakeCodec(rpc.cfg.Modules, []string{})
 	return rpc, rpc.Initialize(keyringOptions)
 }
 
+// Closes internal clients used by compass
 func (c *Client) Close() error {
 	var closeErr error = fmt.Errorf("client already close")
 	c.closeFn.Do(func() {
@@ -51,6 +53,7 @@ func (c *Client) Close() error {
 	return closeErr
 }
 
+// Initializes the compass client, and should be called immediately after instantiation
 func (c *Client) Initialize(keyringOptions []keyring.Option) error {
 	var initErr error = nil
 	c.initFn.Do(func() {
@@ -75,10 +78,7 @@ func (c *Client) Initialize(keyringOptions []keyring.Option) error {
 
 		grpcConn, err := grpc.Dial(
 			c.cfg.GRPCAddr,      // your gRPC server address.
-			grpc.WithInsecure(), // The Cosmos SDK doesn't support any transport security mechanism.
-			// This instantiates a general gRPC codec which handles proto bytes. We pass in a nil interface registr
-			// if the request/response types contain interface instead of 'nil' you should pass the application spe
-			//grpc.WithDefaultCallOptions(grpc.ForceCodec(codec.NewProtoCodec(nil).GRPCCodec())),
+			grpc.WithInsecure(), // The Cosmos SDK doesn't support any transport security mechanism
 		)
 		if err != nil {
 			initErr = fmt.Errorf("failed to dial grpc server node %s", err)
@@ -94,6 +94,7 @@ func (c *Client) Initialize(keyringOptions []keyring.Option) error {
 	return initErr
 }
 
+// Returns an instance of tx.Factory which can be used to broadcast transactions
 func (c *Client) TxFactory() tx.Factory {
 	return tx.Factory{}.
 		WithAccountRetriever(c).
@@ -104,6 +105,7 @@ func (c *Client) TxFactory() tx.Factory {
 		WithSignMode(signing.SignMode_SIGN_MODE_DIRECT)
 }
 
+// Returns an instance of client.Context, used widely throughout cosmos-sdk
 func (c *Client) ClientContext() client.Context {
 	return client.Context{}.
 		WithViper("breaker").

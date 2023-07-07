@@ -16,6 +16,7 @@ import (
 )
 
 var (
+	// Provides a default set of modules
 	ModuleBasics = []module.AppModuleBasic{
 		auth.AppModuleBasic{},
 		bank.AppModuleBasic{},
@@ -30,6 +31,7 @@ var (
 	}
 )
 
+// Allows configuration of the compass client
 type ClientConfig struct {
 	Key            string                  `json:"key" yaml:"key"`
 	ChainID        string                  `json:"chain-id" yaml:"chain-id"`
@@ -51,6 +53,7 @@ type ClientConfig struct {
 	Slip44         int                     `json:"slip44" yaml:"slip44"`
 }
 
+// Validates the client configuration
 func (ccc *ClientConfig) Validate() error {
 	if _, err := time.ParseDuration(ccc.Timeout); err != nil {
 		return err
@@ -63,14 +66,17 @@ func (ccc *ClientConfig) Validate() error {
 	return nil
 }
 
+// Formats the given directory for use as a keyring directory
 func (ccc *ClientConfig) FormatKeysDir(home string) string {
 	return path.Join(home, "keys", ccc.ChainID)
 }
 
+// Formats, and sets the home directory as the keyring direcotry
 func (ccc *ClientConfig) SetKeysDir(home string) {
 	ccc.KeyDirectory = ccc.FormatKeysDir(home)
 }
 
+// Returns a configuration suitable for the cosmoshub chain
 func GetCosmosHubConfig(keyHome string, debug bool) *ClientConfig {
 	cfg := &ClientConfig{
 		Key:            "default",
@@ -92,6 +98,7 @@ func GetCosmosHubConfig(keyHome string, debug bool) *ClientConfig {
 	return cfg
 }
 
+// Returns a configuration suitable for the osmosis blockchain
 func GetOsmosisConfig(keyHome string, debug bool) *ClientConfig {
 	cfg := &ClientConfig{
 		Key:            "default",
@@ -113,6 +120,7 @@ func GetOsmosisConfig(keyHome string, debug bool) *ClientConfig {
 	return cfg
 }
 
+// Returns a configuration suitable for usage in simd environments
 func GetSimdConfig() *ClientConfig {
 	cfg := &ClientConfig{
 		Key:            "default",

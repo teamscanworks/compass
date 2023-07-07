@@ -85,6 +85,7 @@ func (cc *Client) KeyExists(name string) bool {
 func (cc *Client) ExportPrivKeyArmor(keyName string) (armor string, err error) {
 	return cc.Keyring.ExportPrivKeyArmor(keyName, ckeys.DefaultKeyPass)
 }
+
 func (cc *Client) KeyAddOrRestore(keyName string, coinType uint32, mnemonic ...string) (*KeyOutput, error) {
 	var mnemonicStr string
 	var err error

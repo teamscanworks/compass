@@ -10,6 +10,7 @@ import (
 	"github.com/cosmos/go-bip39"
 )
 
+// Returns a Cosmos JSON-RPC websocket client
 func NewRPCClient(addr string, timeout time.Duration) (*rpchttp.HTTP, error) {
 	httpClient, err := libclient.DefaultHTTPClient(addr)
 	if err != nil {
@@ -23,7 +24,7 @@ func NewRPCClient(addr string, timeout time.Duration) (*rpchttp.HTTP, error) {
 	return rpcClient, nil
 }
 
-// returns a keyring.Option that specifies a list of supported algorithms
+// returns a keyring.Option that specifies a list of default algorithms
 func DefaultSignatureOptions() keyring.Option {
 	return func(options *keyring.Options) {
 		options.SupportedAlgos = keyring.SigningAlgoList{hd.Secp256k1}
@@ -31,7 +32,7 @@ func DefaultSignatureOptions() keyring.Option {
 	}
 }
 
-// CreateMnemonic creates a new mnemonic
+// Returns a BIP39 mnemonic using the english language
 func CreateMnemonic() (string, error) {
 	entropySeed, err := bip39.NewEntropy(256)
 	if err != nil {
