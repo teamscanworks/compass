@@ -11,10 +11,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	"github.com/cosmos/cosmos-sdk/x/distribution"
 	"github.com/cosmos/cosmos-sdk/x/gov"
-	"github.com/cosmos/cosmos-sdk/x/gov/client"
 	"github.com/cosmos/cosmos-sdk/x/mint"
 	"github.com/cosmos/cosmos-sdk/x/params"
-	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 )
@@ -27,9 +25,7 @@ var (
 		bank.AppModuleBasic{},
 		// TODO: add osmosis governance proposal types here
 		// TODO: add other proposal types here
-		gov.NewAppModuleBasic([]client.ProposalHandler{
-			paramsclient.ProposalHandler,
-		}),
+		gov.NewAppModuleBasic(nil),
 		crisis.AppModuleBasic{},
 		distribution.AppModuleBasic{},
 		mint.AppModuleBasic{},
