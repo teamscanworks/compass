@@ -114,5 +114,6 @@ func (c *Client) ClientContext() client.Context {
 		WithKeyring(c.Keyring).
 		WithGRPCClient(c.GRPC).
 		WithClient(c.RPC).
-		WithCodec(c.Codec.Marshaler)
+		WithCodec(c.Codec.Marshaler).
+		WithInterfaceRegistry(c.Codec.InterfaceRegistry)
 }
