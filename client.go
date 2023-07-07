@@ -9,6 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	cclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
+	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"go.uber.org/zap"
@@ -79,6 +80,7 @@ func (c *Client) Initialize(keyringOptions []keyring.Option) error {
 		grpcConn, err := grpc.Dial(
 			c.cfg.GRPCAddr,      // your gRPC server address.
 			grpc.WithInsecure(), // The Cosmos SDK doesn't support any transport security mechanism
+			grpc.WithDefaultCallOptions(grpc.ForceCodec(codec.NewProtoCodec(nil).GRPCCodec())),
 		)
 		if err != nil {
 			initErr = fmt.Errorf("failed to dial grpc server node %s", err)
