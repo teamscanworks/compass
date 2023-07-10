@@ -12,6 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
+	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
@@ -22,6 +23,7 @@ type Client struct {
 	cfg     *ClientConfig
 	RPC     *rpchttp.HTTP
 	GRPC    *grpc.ClientConn
+	Factory tx.Factory
 	Keyring keyring.Keyring
 
 	Codec Codec
@@ -76,11 +78,15 @@ func (c *Client) Initialize(keyringOptions []keyring.Option) error {
 			initErr = fmt.Errorf("failed to construct client from node %s", err)
 			return
 		}
-
+		factory, err := tx.NewFactoryCLI(c.ClientContext(), pflag.NewFlagSet("", pflag.ExitOnError))
+		if err != nil {
+			initErr = fmt.Errorf("failed to initialize tx factory %s", err)
+			return
+		}
 		grpcConn, err := grpc.Dial(
 			c.cfg.GRPCAddr,      // your gRPC server address.
 			grpc.WithInsecure(), // The Cosmos SDK doesn't support any transport security mechanism
-			grpc.WithDefaultCallOptions(grpc.ForceCodec(codec.NewProtoCodec(c.Codec.InterfaceRegistry).GRPCCodec())),
+			grpc.WithDefaultCallOptions(grpc.ForceCodec(codec.NewProtoCodec(nil).GRPCCodec())),
 		)
 		if err != nil {
 			initErr = fmt.Errorf("failed to dial grpc server node %s", err)
@@ -90,14 +96,20 @@ func (c *Client) Initialize(keyringOptions []keyring.Option) error {
 		c.RPC = rpc
 		c.GRPC = grpcConn
 		c.Keyring = keyInfo
+		c.Factory = factory
 		c.log.Info("initialized client")
 	})
 
 	return initErr
 }
 
-// Returns an instance of tx.Factory which can be used to broadcast transactions
+// Returns previously initialized transaction factory
 func (c *Client) TxFactory() tx.Factory {
+	return c.Factory
+}
+
+// Returns an instance of tx.Factory which can be used to broadcast transactions
+func (c *Client) TxFactory2() tx.Factory {
 	return tx.Factory{}.
 		WithAccountRetriever(c).
 		WithChainID(c.cfg.ChainID).
