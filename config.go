@@ -133,13 +133,13 @@ func GetOsmosisConfig(keyHome string, debug bool) *ClientConfig {
 func GetSimdConfig() *ClientConfig {
 	cfg := &ClientConfig{
 		Key:            "default",
-		ChainID:        "cosmoshub-4",
+		ChainID:        "testing",
 		RPCAddr:        "tcp://127.0.0.1:26657",
 		GRPCAddr:       "127.0.0.1:9090",
 		AccountPrefix:  "cosmos",
 		KeyringBackend: "test",
 		GasAdjustment:  1.2,
-		GasPrices:      "0.01uatom",
+		GasPrices:      "1stake",
 		MinGasAmount:   0,
 		KeyDirectory:   "keyring-test",
 		Debug:          true,
