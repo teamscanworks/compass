@@ -9,9 +9,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	cclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
-	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -73,30 +73,42 @@ func (c *Client) Initialize(keyringOptions []keyring.Option) error {
 			initErr = fmt.Errorf("failed to initialize keyring %s", err)
 			return
 		}
+		c.Keyring = keyInfo
 		rpc, err := cclient.NewClientFromNode(c.cfg.RPCAddr)
 		if err != nil {
 			initErr = fmt.Errorf("failed to construct client from node %s", err)
 			return
 		}
-		factory, err := tx.NewFactoryCLI(c.ClientContext(), pflag.NewFlagSet("", pflag.ExitOnError))
-		if err != nil {
-			initErr = fmt.Errorf("failed to initialize tx factory %s", err)
-			return
-		}
+		c.RPC = rpc
 		grpcConn, err := grpc.Dial(
 			c.cfg.GRPCAddr,      // your gRPC server address.
 			grpc.WithInsecure(), // The Cosmos SDK doesn't support any transport security mechanism
-			grpc.WithDefaultCallOptions(grpc.ForceCodec(codec.NewProtoCodec(nil).GRPCCodec())),
+			//grpc.WithDefaultCallOptions(grpc.ForceCodec(codec.NewProtoCodec(nil).GRPCCodec())),
 		)
 		if err != nil {
 			initErr = fmt.Errorf("failed to dial grpc server node %s", err)
 			return
 		}
-
-		c.RPC = rpc
 		c.GRPC = grpcConn
-		c.Keyring = keyInfo
-		c.Factory = factory
+		factory, err := tx.NewFactoryCLI(c.ClientContext(), pflag.NewFlagSet("", pflag.ExitOnError))
+		if err != nil {
+			initErr = fmt.Errorf("failed to initialize tx factory %s", err)
+			return
+		}
+		signOpts, err := authtx.NewDefaultSigningOptions()
+		if err != nil {
+			initErr = fmt.Errorf("failed to get tx opts %s", err)
+			return
+		}
+		txCfg, err := authtx.NewTxConfigWithOptions(c.Codec.Marshaler, authtx.ConfigOptions{
+			SigningOptions: signOpts,
+		})
+		if err != nil {
+			initErr = fmt.Errorf("failed to initialize tx config %s", err)
+			return
+		}
+		c.Factory = c.configTxFactory(factory.WithTxConfig(txCfg))
+
 		c.log.Info("initialized client")
 	})
 
@@ -106,17 +118,6 @@ func (c *Client) Initialize(keyringOptions []keyring.Option) error {
 // Returns previously initialized transaction factory
 func (c *Client) TxFactory() tx.Factory {
 	return c.Factory
-}
-
-// Returns an instance of tx.Factory which can be used to broadcast transactions
-func (c *Client) TxFactory2() tx.Factory {
-	return tx.Factory{}.
-		WithAccountRetriever(c).
-		WithChainID(c.cfg.ChainID).
-		WithGasAdjustment(c.cfg.GasAdjustment).
-		WithGasPrices(c.cfg.GasPrices).
-		WithKeybase(c.Keyring).
-		WithSignMode(signing.SignMode_SIGN_MODE_DIRECT)
 }
 
 // Returns an instance of client.Context, used widely throughout cosmos-sdk
@@ -130,4 +131,14 @@ func (c *Client) ClientContext() client.Context {
 		WithClient(c.RPC).
 		WithCodec(c.Codec.Marshaler).
 		WithInterfaceRegistry(c.Codec.InterfaceRegistry)
+}
+
+func (c *Client) configTxFactory(input tx.Factory) tx.Factory {
+	return input.
+		WithAccountRetriever(c).
+		WithChainID(c.cfg.ChainID).
+		WithGasAdjustment(c.cfg.GasAdjustment).
+		WithGasPrices(c.cfg.GasPrices).
+		WithKeybase(c.Keyring).
+		WithSignMode(signing.SignMode_SIGN_MODE_DIRECT)
 }
