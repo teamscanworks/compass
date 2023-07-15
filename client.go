@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
@@ -40,6 +41,8 @@ type Client struct {
 	// NOTE: this isn't very performant, so should probably move to a goroutine that
 	// runs in a goroutine, accepting messages to send through a channel
 	txLock sync.Mutex
+
+	seqNum uint64
 }
 
 // Returns a new compass client used to interact with the cosmos blockchain
@@ -150,6 +153,16 @@ func (c *Client) UpdateFromName(name string) {
 func (c *Client) ClientContext() client.Context {
 	return c.CCtx
 }
+
+// Sends the given transaction, ensuring that it is signed, and that
+// sequence numbers and all other required fields are set
+//
+// Note: this sleeps for 5 seconds after sending the transaction as a hacky workaround
+// for avoiding sequence number race conditions as the cosmos-sdk when confirming a transaction
+// after sending does not actually appear to check that the transaction has been confirmed, only
+// that it has been received without error
+//
+// TODO: return the hash of the signed transaction
 func (c *Client) SendTransaction(msg sdktypes.Msg) error {
 	c.txLock.Lock()
 	defer c.txLock.Unlock()
@@ -160,6 +173,7 @@ func (c *Client) SendTransaction(msg sdktypes.Msg) error {
 	if err := tx.GenerateOrBroadcastTxWithFactory(c.CCtx, c.Factory, msg); err != nil {
 		return fmt.Errorf("failed to send transaction %v", err)
 	}
+	time.Sleep(time.Second * 5)
 	return nil
 }
 
@@ -215,15 +229,14 @@ func (c *Client) prepare() error {
 	}
 	factory, err := c.Factory.Prepare(c.CCtx)
 	if err != nil {
-		c.log.Error("failed to prepare factory", zap.Error(err))
 		return err
 	}
-	c.Factory = factory
-	_, seq, err := c.Factory.AccountRetriever().GetAccountNumberSequence(c.CCtx, *kp)
+	_, seq, err := factory.AccountRetriever().GetAccountNumberSequence(c.CCtx, *kp)
 	if err != nil {
 		return err
 	}
-	c.Factory = c.Factory.WithSequence(seq)
+	c.seqNum = seq
+	c.Factory = factory.WithSequence(c.seqNum)
 	return nil
 }
 
