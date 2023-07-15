@@ -121,9 +121,24 @@ func (c *Client) Initialize(keyringOptions []keyring.Option) error {
 	return initErr
 }
 
+// Triggers keyring migration, ensuring that the factory, and client context are updated
+func (c *Client) MigrateKeyring() error {
+	_, err := c.Keyring.MigrateAll()
+	if err != nil {
+		return err
+	}
+	c.Factory = c.Factory.WithKeybase(c.Keyring)
+	c.CCtx = c.CCtx.WithKeyring(c.Keyring)
+	return nil
+}
+
 // Returns previously initialized transaction factory
 func (c *Client) TxFactory() tx.Factory {
 	return c.Factory
+}
+
+func (c *Client) UpdateFromName(name string) {
+	c.CCtx = c.CCtx.WithFromName(name)
 }
 
 // Returns an instance of client.Context, used widely throughout cosmos-sdk
@@ -139,6 +154,7 @@ func (c *Client) configTxFactory(input tx.Factory) tx.Factory {
 		WithGasPrices(c.cfg.GasPrices).
 		WithKeybase(c.Keyring).
 		WithSignMode(signing.SignMode_SIGN_MODE_DIRECT).
+		// prevents some runtime panics  due to misconfigured clients causing the error messages to be logged
 		WithSimulateAndExecute(true)
 }
 
@@ -149,9 +165,14 @@ func (c *Client) configClientContext(cctx client.Context) client.Context {
 		WithChainID(c.cfg.ChainID).
 		WithKeyring(c.Keyring).
 		WithGRPCClient(c.GRPC).
-		WithClient(c.RPC).WithSignModeStr(signing.SignMode_SIGN_MODE_DIRECT.String()).
+		WithClient(c.RPC).
+		WithSignModeStr(signing.SignMode_SIGN_MODE_DIRECT.String()).
 		WithCodec(c.Codec.Marshaler).
-		WithInterfaceRegistry(c.Codec.InterfaceRegistry) //.WithOutput(os.Stdout)
+		WithInterfaceRegistry(c.Codec.InterfaceRegistry).
+		WithBroadcastMode("sync").
+		// this is important to set otherwise it is not possible to programmatically sign
+		// transactions with cosmos-sdk as it will expect the user to provide input
+		WithSkipConfirmation(true)
 }
 
 func (c *Client) PrepareClientContext(cctx client.Context) error {
@@ -175,7 +196,7 @@ func (c *Client) SetFromAddress() error {
 		c.log.Warn("no keys found, you should create at least one")
 	} else {
 		c.log.Info("configured from address", zap.String("from.address", activeKp.String()))
-		c.CCtx = c.CCtx.WithFromAddress(*activeKp)
+		c.CCtx = c.CCtx.WithFromAddress(*activeKp).WithFromName(c.cfg.Key)
 	}
 	return nil
 }
@@ -195,4 +216,17 @@ func (c *Client) GetActiveKeypair() (*sdktypes.AccAddress, error) {
 		return nil, err
 	}
 	return &kp, nil
+}
+
+// Returns the keyring record located at the given index, returning an error
+// if there are less than `idx` keys in the keyring
+func (c *Client) KeyringRecordAt(idx int) (*keyring.Record, error) {
+	keys, err := c.Keyring.List()
+	if err != nil {
+		return nil, err
+	}
+	if len(keys) < idx-1 {
+		return nil, fmt.Errorf("key length %v less than index %v", len(keys), idx)
+	}
+	return keys[idx], nil
 }

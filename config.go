@@ -42,6 +42,7 @@ var (
 
 // Allows configuration of the compass client
 type ClientConfig struct {
+	// the name of that is used as the `FromName` for transaction signing
 	Key            string                  `json:"key" yaml:"key"`
 	ChainID        string                  `json:"chain-id" yaml:"chain-id"`
 	RPCAddr        string                  `json:"rpc-addr" yaml:"rpc-addr"`
