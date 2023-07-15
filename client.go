@@ -5,14 +5,14 @@ import (
 	"os"
 	"sync"
 
+	"github.com/cosmos/cosmos-sdk/client"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 
 	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
-	"github.com/cosmos/cosmos-sdk/client"
 	cclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	"github.com/spf13/pflag"
 	"go.uber.org/zap"
@@ -34,7 +34,12 @@ type Client struct {
 	initFn  sync.Once
 	closeFn sync.Once
 
-	factoryLock sync.Mutex
+	// sequence number setting can potentially lead to race conditions, so lock access
+	// to the ability to send transactions to a single tx at a time
+	//
+	// NOTE: this isn't very performant, so should probably move to a goroutine that
+	// runs in a goroutine, accepting messages to send through a channel
+	txLock sync.Mutex
 }
 
 // Returns a new compass client used to interact with the cosmos blockchain
@@ -145,54 +150,16 @@ func (c *Client) UpdateFromName(name string) {
 func (c *Client) ClientContext() client.Context {
 	return c.CCtx
 }
-
-func (c *Client) configTxFactory(input tx.Factory) tx.Factory {
-	return input.
-		WithAccountRetriever(c).
-		WithChainID(c.cfg.ChainID).
-		WithGasAdjustment(c.cfg.GasAdjustment).
-		WithGasPrices(c.cfg.GasPrices).
-		WithKeybase(c.Keyring).
-		WithSignMode(signing.SignMode_SIGN_MODE_DIRECT).
-		// prevents some runtime panics  due to misconfigured clients causing the error messages to be logged
-		WithSimulateAndExecute(true)
-}
-
-func (c *Client) configClientContext(cctx client.Context) client.Context {
-	return cctx.
-		//WithViper("breaker").
-		WithAccountRetriever(c).
-		WithChainID(c.cfg.ChainID).
-		WithKeyring(c.Keyring).
-		WithGRPCClient(c.GRPC).
-		WithClient(c.RPC).
-		WithSignModeStr(signing.SignMode_SIGN_MODE_DIRECT.String()).
-		WithCodec(c.Codec.Marshaler).
-		WithInterfaceRegistry(c.Codec.InterfaceRegistry).
-		WithBroadcastMode("sync").
-		// this is important to set otherwise it is not possible to programmatically sign
-		// transactions with cosmos-sdk as it will expect the user to provide input
-		WithSkipConfirmation(true)
-}
-
-func (c *Client) PrepareClientContext(cctx client.Context) error {
-	c.factoryLock.Lock()
-	defer c.factoryLock.Unlock()
-	kp, err := c.GetActiveKeypair()
-	if err != nil {
-		return err
+func (c *Client) SendTransaction(msg sdktypes.Msg) error {
+	c.txLock.Lock()
+	defer c.txLock.Unlock()
+	if err := c.prepare(); err != nil {
+		return fmt.Errorf("transaction preparation failed %v", err)
 	}
-	factory, err := c.Factory.Prepare(cctx)
-	if err != nil {
-		c.log.Error("failed to prepare factory", zap.Error(err))
-		return err
+	c.log.Info("sending transaction")
+	if err := tx.GenerateOrBroadcastTxWithFactory(c.CCtx, c.Factory, msg); err != nil {
+		return fmt.Errorf("failed to send transaction %v", err)
 	}
-	c.Factory = factory
-	_, seq, err := c.Factory.AccountRetriever().GetAccountNumberSequence(c.CCtx, *kp)
-	if err != nil {
-		return err
-	}
-	c.Factory = c.Factory.WithSequence(seq)
 	return nil
 }
 
@@ -238,4 +205,53 @@ func (c *Client) KeyringRecordAt(idx int) (*keyring.Record, error) {
 		return nil, fmt.Errorf("key length %v less than index %v", len(keys), idx)
 	}
 	return keys[idx], nil
+}
+
+// prepartion is susceptible to race conditions so its an private function
+func (c *Client) prepare() error {
+	kp, err := c.GetActiveKeypair()
+	if err != nil {
+		return err
+	}
+	factory, err := c.Factory.Prepare(c.CCtx)
+	if err != nil {
+		c.log.Error("failed to prepare factory", zap.Error(err))
+		return err
+	}
+	c.Factory = factory
+	_, seq, err := c.Factory.AccountRetriever().GetAccountNumberSequence(c.CCtx, *kp)
+	if err != nil {
+		return err
+	}
+	c.Factory = c.Factory.WithSequence(seq)
+	return nil
+}
+
+func (c *Client) configTxFactory(input tx.Factory) tx.Factory {
+	return input.
+		WithAccountRetriever(c).
+		WithChainID(c.cfg.ChainID).
+		WithGasAdjustment(c.cfg.GasAdjustment).
+		WithGasPrices(c.cfg.GasPrices).
+		WithKeybase(c.Keyring).
+		WithSignMode(signing.SignMode_SIGN_MODE_DIRECT).
+		// prevents some runtime panics  due to misconfigured clients causing the error messages to be logged
+		WithSimulateAndExecute(true)
+}
+
+func (c *Client) configClientContext(cctx client.Context) client.Context {
+	return cctx.
+		//WithViper("breaker").
+		WithAccountRetriever(c).
+		WithChainID(c.cfg.ChainID).
+		WithKeyring(c.Keyring).
+		WithGRPCClient(c.GRPC).
+		WithClient(c.RPC).
+		WithSignModeStr(signing.SignMode_SIGN_MODE_DIRECT.String()).
+		WithCodec(c.Codec.Marshaler).
+		WithInterfaceRegistry(c.Codec.InterfaceRegistry).
+		WithBroadcastMode("sync").
+		// this is important to set otherwise it is not possible to programmatically sign
+		// transactions with cosmos-sdk as it will expect the user to provide input
+		WithSkipConfirmation(true)
 }
