@@ -102,6 +102,7 @@ func GetCosmosHubConfig(keyHome string, debug bool) *ClientConfig {
 		Timeout:        "20s",
 		OutputFormat:   "json",
 		SignModeStr:    "direct",
+		Modules:        ModuleBasics,
 	}
 	cfg.SetKeysDir(keyHome)
 	return cfg
@@ -124,6 +125,7 @@ func GetOsmosisConfig(keyHome string, debug bool) *ClientConfig {
 		Timeout:        "20s",
 		OutputFormat:   "json",
 		SignModeStr:    "direct",
+		Modules:        ModuleBasics,
 	}
 	cfg.SetKeysDir(keyHome)
 	return cfg
@@ -146,6 +148,7 @@ func GetSimdConfig() *ClientConfig {
 		Timeout:        "20s",
 		OutputFormat:   "json",
 		SignModeStr:    "direct",
+		Modules:        ModuleBasics,
 	}
 	cfg.SetKeysDir("keyring-test")
 	return cfg
