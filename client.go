@@ -178,12 +178,21 @@ func (c *Client) configClientContext(cctx client.Context) client.Context {
 func (c *Client) PrepareClientContext(cctx client.Context) error {
 	c.factoryLock.Lock()
 	defer c.factoryLock.Unlock()
+	kp, err := c.GetActiveKeypair()
+	if err != nil {
+		return err
+	}
 	factory, err := c.Factory.Prepare(cctx)
 	if err != nil {
 		c.log.Error("failed to prepare factory", zap.Error(err))
 		return err
 	}
 	c.Factory = factory
+	_, seq, err := c.Factory.AccountRetriever().GetAccountNumberSequence(c.CCtx, *kp)
+	if err != nil {
+		return err
+	}
+	c.Factory = c.Factory.WithSequence(seq)
 	return nil
 }
 
