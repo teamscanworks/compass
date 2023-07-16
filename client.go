@@ -1,6 +1,7 @@
 package compass
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sync"
@@ -11,7 +12,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 
 	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
-	cclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
@@ -87,11 +87,15 @@ func (c *Client) Initialize(keyringOptions []keyring.Option) error {
 			return
 		}
 		c.Keyring = keyInfo
-		rpc, err := cclient.NewClientFromNode(c.cfg.RPCAddr)
+		rpc, err := NewRPCClient(c.cfg.RPCAddr, time.Second*30)
 		if err != nil {
-			initErr = fmt.Errorf("failed to construct client from node %s", err)
-			return
+			initErr = fmt.Errorf("failed to construct rpc client %v", err)
 		}
+		//rpc, err := cclient.NewClientFromNode(c.cfg.RPCAddr)
+		//if err != nil {
+		//	initErr = fmt.Errorf("failed to construct client from node %s", err)
+		//	return
+		//}
 		c.RPC = rpc
 		grpcConn, err := grpc.Dial(
 			c.cfg.GRPCAddr,      // your gRPC server address.
@@ -163,16 +167,22 @@ func (c *Client) ClientContext() client.Context {
 // that it has been received without error
 //
 // TODO: return the hash of the signed transaction
-func (c *Client) SendTransaction(msg sdktypes.Msg) error {
+func (c *Client) SendTransaction(ctx context.Context, msg sdktypes.Msg) error {
 	c.txLock.Lock()
 	defer c.txLock.Unlock()
 	if err := c.prepare(); err != nil {
 		return fmt.Errorf("transaction preparation failed %v", err)
 	}
 	c.log.Info("sending transaction")
-	if err := tx.GenerateOrBroadcastTxWithFactory(c.CCtx, c.Factory, msg); err != nil {
-		return fmt.Errorf("failed to send transaction %v", err)
+	txHash, err := c.BroadcastTx(ctx, msg)
+	if err != nil {
+		return fmt.Errorf("failed to broadcast transaction %v", err)
 	}
+	c.log.Info("sent transaction", zap.String("tx.hash", txHash))
+	//if err := tx.GenerateOrBroadcastTxWithFactory(c.CCtx, c.Factory, msg); err != nil {
+	//	return fmt.Errorf("failed to send transaction %v", err)
+	//}
+	//tx.Sign()
 	time.Sleep(time.Second * 5)
 	return nil
 }
