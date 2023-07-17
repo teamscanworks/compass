@@ -24,5 +24,4 @@ func TestClient(t *testing.T) {
 	abcInfo, err := client.RPC.ABCIInfo(context.Background())
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, abcInfo.Response.LastBlockHeight, int64(1))
-	require.NotNil(t, client.ClientContext())
 }

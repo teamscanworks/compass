@@ -2,6 +2,7 @@ package compass
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -12,7 +13,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/go-bip39"
-	"go.uber.org/zap"
 )
 
 // Returns a Cosmos JSON-RPC websocket client
@@ -50,36 +50,44 @@ func CreateMnemonic() (string, error) {
 	return mnemonic, nil
 }
 
-// Broadcasts a transaction, returning the transaction hash
+// Broadcasts a transaction, returning the transaction hash. This is is not thread-safe, as the factory can
+// return a sequence number that is behind X sequences depending on the amount of transactions that have been sent
+// and the time to confirm transactions.
+//
+// To be as safe as possible it's recommended the caller use `SendTransaction`
 func (c *Client) BroadcastTx(ctx context.Context, msgs ...sdk.Msg) (string, error) {
-	factory, err := c.Factory.Prepare(c.CCtx)
+	factory, err := c.factory.Prepare(c.cctx)
 	if err != nil {
 		return "", fmt.Errorf("failed to prepare transaction %s", err)
 	}
-	c.log.Debug("building unsigned tx")
+
 	unsignedTx, err := factory.BuildUnsignedTx(msgs...)
 	if err != nil {
-		c.log.Debug("building tx failed", zap.Error(err))
 		return "", fmt.Errorf("failed to build unsigned transaction %s", err)
 	}
-	c.log.Debug("signing transaction")
-	if err := tx.Sign(c.CCtx.CmdContext, factory, c.CCtx.GetFromName(), unsignedTx, true); err != nil {
-		c.log.Debug("signing failed", zap.Error(err))
+
+	if err := tx.Sign(c.cctx.CmdContext, factory, c.cctx.GetFromName(), unsignedTx, true); err != nil {
 		return "", fmt.Errorf("failed to sign transaction %s", err)
 	}
-	c.log.Debug("encoding transaction")
-	txBytes, err := c.CCtx.TxConfig.TxEncoder()(unsignedTx.GetTx())
+
+	txBytes, err := c.cctx.TxConfig.TxEncoder()(unsignedTx.GetTx())
 	if err != nil {
-		c.log.Debug("encoding failed", zap.Error(err))
 		return "", fmt.Errorf("failed to get transaction encoder %s", err)
 	}
-	c.log.Debug("broadcasting transaction")
-	res, err := c.CCtx.BroadcastTx(txBytes)
+
+	res, err := c.cctx.BroadcastTx(txBytes)
 	if err != nil {
-		c.log.Debug("broadcast failed", zap.Error(err))
 		return "", fmt.Errorf("failed to broadcast transaction %s", err)
 	}
-	c.log.Debug("confirming transaction", zap.String("tx.hash", res.TxHash))
+
+	txBytes, err = hex.DecodeString(res.TxHash)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode string %s", err)
+	}
+
+	// allow up to 10 seconds for the transaction to be confirmed before bailing
+	//
+	// TODO: allow this to be configurable
 	exitTicker := time.After(time.Second * 10)
 	checkTicker := time.NewTicker(time.Second)
 	defer checkTicker.Stop()
@@ -88,12 +96,9 @@ func (c *Client) BroadcastTx(ctx context.Context, msgs ...sdk.Msg) (string, erro
 		case <-exitTicker:
 			return "", fmt.Errorf("failed to confirm transaction")
 		case <-checkTicker.C:
-			txRes, err := c.CCtx.Client.Tx(ctx, []byte(res.TxHash), false)
-			if err != nil {
-				c.log.Debug("status check failed", zap.Error(err), zap.String("tx.hash", res.TxHash))
+			if _, err := c.cctx.Client.Tx(ctx, txBytes, false); err != nil {
 				continue
 			}
-			c.log.Info("confirmed transaction", zap.String("tx.hash", res.TxHash), zap.Any("response", txRes))
 			return res.TxHash, nil
 		}
 	}

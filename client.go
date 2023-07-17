@@ -26,8 +26,6 @@ type Client struct {
 	cfg     *ClientConfig
 	RPC     *rpchttp.HTTP
 	GRPC    *grpc.ClientConn
-	CCtx    client.Context
-	Factory tx.Factory
 	Keyring keyring.Keyring
 
 	Codec Codec
@@ -35,11 +33,13 @@ type Client struct {
 	initFn  sync.Once
 	closeFn sync.Once
 
+	cctx    client.Context
+	factory tx.Factory
+
 	// sequence number setting can potentially lead to race conditions, so lock access
 	// to the ability to send transactions to a single tx at a time
 	//
-	// NOTE: this isn't very performant, so should probably move to a goroutine that
-	// runs in a goroutine, accepting messages to send through a channel
+	// NOTE: this isn't very performant, so should probably move to a goroutine accepting messages to send through a channel
 	txLock sync.Mutex
 
 	seqNum uint64
@@ -81,22 +81,20 @@ func (c *Client) Initialize(keyringOptions []keyring.Option) error {
 			initErr = fmt.Errorf("invalid client object: no config")
 			return
 		}
+
 		keyInfo, err := keyring.New(c.cfg.ChainID, c.cfg.KeyringBackend, c.cfg.KeyDirectory, os.Stdin, c.Codec.Marshaler, keyringOptions...)
 		if err != nil {
 			initErr = fmt.Errorf("failed to initialize keyring %s", err)
 			return
 		}
 		c.Keyring = keyInfo
+
 		rpc, err := NewRPCClient(c.cfg.RPCAddr, time.Second*30)
 		if err != nil {
 			initErr = fmt.Errorf("failed to construct rpc client %v", err)
 		}
-		//rpc, err := cclient.NewClientFromNode(c.cfg.RPCAddr)
-		//if err != nil {
-		//	initErr = fmt.Errorf("failed to construct client from node %s", err)
-		//	return
-		//}
 		c.RPC = rpc
+
 		grpcConn, err := grpc.Dial(
 			c.cfg.GRPCAddr,      // your gRPC server address.
 			grpc.WithInsecure(), // The Cosmos SDK doesn't support any transport security mechanism
@@ -106,6 +104,7 @@ func (c *Client) Initialize(keyringOptions []keyring.Option) error {
 			return
 		}
 		c.GRPC = grpcConn
+
 		signOpts, err := authtx.NewDefaultSigningOptions()
 		if err != nil {
 			initErr = fmt.Errorf("failed to get tx opts %s", err)
@@ -118,15 +117,15 @@ func (c *Client) Initialize(keyringOptions []keyring.Option) error {
 			initErr = fmt.Errorf("failed to initialize tx config %s", err)
 			return
 		}
+		c.cctx = c.configClientContext(client.Context{}.WithTxConfig(txCfg))
 
-		c.CCtx = c.configClientContext(client.Context{}.WithTxConfig(txCfg))
-
-		factory, err := tx.NewFactoryCLI(c.ClientContext(), pflag.NewFlagSet("", pflag.ExitOnError))
+		factory, err := tx.NewFactoryCLI(c.cctx, pflag.NewFlagSet("", pflag.ExitOnError))
 		if err != nil {
 			initErr = fmt.Errorf("failed to initialize tx factory %s", err)
 			return
 		}
-		c.Factory = c.configTxFactory(factory.WithTxConfig(txCfg))
+		c.factory = c.configTxFactory(factory.WithTxConfig(txCfg))
+
 		c.log.Info("initialized client")
 	})
 
@@ -139,54 +138,35 @@ func (c *Client) MigrateKeyring() error {
 	if err != nil {
 		return err
 	}
-	c.Factory = c.Factory.WithKeybase(c.Keyring)
-	c.CCtx = c.CCtx.WithKeyring(c.Keyring)
+	c.factory = c.factory.WithKeybase(c.Keyring)
+	c.cctx = c.cctx.WithKeyring(c.Keyring)
 	return nil
 }
 
-// Returns previously initialized transaction factory
-func (c *Client) TxFactory() tx.Factory {
-	return c.Factory
-}
-
+// Sets the name of the key that is used for signing transactions, this is required
+// to lookup the key material in the keyring
 func (c *Client) UpdateFromName(name string) {
-	c.CCtx = c.CCtx.WithFromName(name)
+	c.cctx = c.cctx.WithFromName(name)
 }
 
-// Returns an instance of client.Context, used widely throughout cosmos-sdk
-func (c *Client) ClientContext() client.Context {
-	return c.CCtx
-}
-
-// Sends the given transaction, ensuring that it is signed, and that
-// sequence numbers and all other required fields are set
-//
-// Note: this sleeps for 5 seconds after sending the transaction as a hacky workaround
-// for avoiding sequence number race conditions as the cosmos-sdk when confirming a transaction
-// after sending does not actually appear to check that the transaction has been confirmed, only
-// that it has been received without error
-//
-// TODO: return the hash of the signed transaction
-func (c *Client) SendTransaction(ctx context.Context, msg sdktypes.Msg) error {
+// Sends and confirms the given message, returning the hex encoded transaction hash
+// if the transaction was successfully confirmed.
+func (c *Client) SendTransaction(ctx context.Context, msg sdktypes.Msg) (string, error) {
 	c.txLock.Lock()
 	defer c.txLock.Unlock()
 	if err := c.prepare(); err != nil {
-		return fmt.Errorf("transaction preparation failed %v", err)
+		return "", fmt.Errorf("transaction preparation failed %v", err)
 	}
-	c.log.Info("sending transaction")
 	txHash, err := c.BroadcastTx(ctx, msg)
 	if err != nil {
-		return fmt.Errorf("failed to broadcast transaction %v", err)
+		return "", fmt.Errorf("failed to broadcast transaction %v", err)
 	}
 	c.log.Info("sent transaction", zap.String("tx.hash", txHash))
-	//if err := tx.GenerateOrBroadcastTxWithFactory(c.CCtx, c.Factory, msg); err != nil {
-	//	return fmt.Errorf("failed to send transaction %v", err)
-	//}
-	//tx.Sign()
-	time.Sleep(time.Second * 5)
-	return nil
+	return txHash, nil
 }
 
+// Updates the address used to sign transactions, using the first available
+// key from the keyring
 func (c *Client) SetFromAddress() error {
 	activeKp, err := c.GetActiveKeypair()
 	if err != nil {
@@ -196,7 +176,7 @@ func (c *Client) SetFromAddress() error {
 		c.log.Warn("no keys found, you should create at least one")
 	} else {
 		c.log.Info("configured from address", zap.String("from.address", activeKp.String()))
-		c.CCtx = c.CCtx.WithFromAddress(*activeKp).WithFromName(c.cfg.Key)
+		c.cctx = c.cctx.WithFromAddress(*activeKp).WithFromName(c.cfg.Key)
 	}
 	return nil
 }
@@ -231,25 +211,28 @@ func (c *Client) KeyringRecordAt(idx int) (*keyring.Record, error) {
 	return keys[idx], nil
 }
 
-// prepartion is susceptible to race conditions so its an private function
+// ensures that all necessary configs are set to enable transaction sending
+//
+// TODO: likely not very performant
 func (c *Client) prepare() error {
 	kp, err := c.GetActiveKeypair()
 	if err != nil {
 		return err
 	}
-	factory, err := c.Factory.Prepare(c.CCtx)
+	factory, err := c.factory.Prepare(c.cctx)
 	if err != nil {
 		return err
 	}
-	_, seq, err := factory.AccountRetriever().GetAccountNumberSequence(c.CCtx, *kp)
+	_, seq, err := factory.AccountRetriever().GetAccountNumberSequence(c.cctx, *kp)
 	if err != nil {
 		return err
 	}
 	c.seqNum = seq
-	c.Factory = factory.WithSequence(c.seqNum)
+	c.factory = factory.WithSequence(c.seqNum)
 	return nil
 }
 
+// helper function which applies configuration against the transaction factory
 func (c *Client) configTxFactory(input tx.Factory) tx.Factory {
 	return input.
 		WithAccountRetriever(c).
@@ -262,6 +245,7 @@ func (c *Client) configTxFactory(input tx.Factory) tx.Factory {
 		WithSimulateAndExecute(true)
 }
 
+// helper function which applies configuration against the client context
 func (c *Client) configClientContext(cctx client.Context) client.Context {
 	return cctx.
 		//WithViper("breaker").
