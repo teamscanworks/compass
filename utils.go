@@ -103,3 +103,13 @@ func (c *Client) BroadcastTx(ctx context.Context, msgs ...sdk.Msg) (string, erro
 		}
 	}
 }
+
+// Returns the address of the key used for transaction signing
+func (c *Client) FromAddress() string {
+	return c.cctx.FromAddress.String()
+}
+
+// Returns the name of the key used for transaction signing
+func (c *Client) FromName() string {
+	return c.cctx.GetFromName()
+}
