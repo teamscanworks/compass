@@ -42,6 +42,7 @@ var (
 
 // Allows configuration of the compass client
 type ClientConfig struct {
+	// the name of that is used as the `FromName` for transaction signing
 	Key            string                  `json:"key" yaml:"key"`
 	ChainID        string                  `json:"chain-id" yaml:"chain-id"`
 	RPCAddr        string                  `json:"rpc-addr" yaml:"rpc-addr"`
@@ -102,6 +103,7 @@ func GetCosmosHubConfig(keyHome string, debug bool) *ClientConfig {
 		Timeout:        "20s",
 		OutputFormat:   "json",
 		SignModeStr:    "direct",
+		Modules:        ModuleBasics,
 	}
 	cfg.SetKeysDir(keyHome)
 	return cfg
@@ -124,6 +126,7 @@ func GetOsmosisConfig(keyHome string, debug bool) *ClientConfig {
 		Timeout:        "20s",
 		OutputFormat:   "json",
 		SignModeStr:    "direct",
+		Modules:        ModuleBasics,
 	}
 	cfg.SetKeysDir(keyHome)
 	return cfg
@@ -133,19 +136,20 @@ func GetOsmosisConfig(keyHome string, debug bool) *ClientConfig {
 func GetSimdConfig() *ClientConfig {
 	cfg := &ClientConfig{
 		Key:            "default",
-		ChainID:        "cosmoshub-4",
+		ChainID:        "testing",
 		RPCAddr:        "tcp://127.0.0.1:26657",
 		GRPCAddr:       "127.0.0.1:9090",
 		AccountPrefix:  "cosmos",
 		KeyringBackend: "test",
 		GasAdjustment:  1.2,
-		GasPrices:      "0.01uatom",
+		GasPrices:      "1stake",
 		MinGasAmount:   0,
 		KeyDirectory:   "keyring-test",
 		Debug:          true,
 		Timeout:        "20s",
 		OutputFormat:   "json",
 		SignModeStr:    "direct",
+		Modules:        ModuleBasics,
 	}
 	cfg.SetKeysDir("keyring-test")
 	return cfg
