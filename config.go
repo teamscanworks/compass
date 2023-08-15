@@ -154,3 +154,26 @@ func GetSimdConfig() *ClientConfig {
 	cfg.SetKeysDir("keyring-test")
 	return cfg
 }
+
+// Returns a configuration suitable for usage in simd environments
+func GetStrideConfig() *ClientConfig {
+	cfg := &ClientConfig{
+		Key:            "default",
+		ChainID:        "testing",
+		RPCAddr:        "https://stride-fleet.main.stridenet.co:443",
+		GRPCAddr:       "127.0.0.1:9090",
+		AccountPrefix:  "stride",
+		KeyringBackend: "test",
+		GasAdjustment:  1.2,
+		GasPrices:      "1stride",
+		MinGasAmount:   0,
+		KeyDirectory:   "keyring-test",
+		Debug:          true,
+		Timeout:        "20s",
+		OutputFormat:   "json",
+		SignModeStr:    "direct",
+		Modules:        ModuleBasics,
+	}
+	cfg.SetKeysDir("keyring-test")
+	return cfg
+}
