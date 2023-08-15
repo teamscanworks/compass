@@ -3,6 +3,7 @@ package compass
 import (
 	"fmt"
 
+	"cosmossdk.io/x/tx/decode"
 	"github.com/cometbft/cometbft/types"
 )
 
@@ -13,4 +14,22 @@ func (c *Client) UnconfirmedTransactions(limit *int) ([]types.Tx, error) {
 		return nil, fmt.Errorf("failed to fetch unconfirmed transactions %+v", err)
 	}
 	return txns.Txs, nil
+}
+
+func DeserializeTransactions(txs []types.Tx) ([]decode.DecodedTx, error) {
+	decoder, err := decode.NewDecoder(decode.Options{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to construct decoder %+v", err)
+	}
+	var out = make([]decode.DecodedTx, len(txs))
+	for _, tx := range txs {
+		decodedTx, err := decoder.Decode(tx)
+		if err != nil {
+			// remove after testing
+			fmt.Printf("failed to decode tx %+v\n", err)
+			continue
+		}
+		out = append(out, *decodedTx)
+	}
+	return out, nil
 }
