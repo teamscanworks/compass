@@ -1,23 +1,26 @@
 package compass
 
 import (
+	"context"
 	"fmt"
 
-	"cosmossdk.io/x/tx/decode"
 	"github.com/cometbft/cometbft/types"
+	"github.com/teamscanworks/compass/decode"
 )
 
 // Returns an array of unconfirmed transactions present in the mempool
-func (c *Client) UnconfirmedTransactions(limit *int) ([]types.Tx, error) {
-	txns, err := c.RPC.UnconfirmedTxs(c.cctx.CmdContext, limit)
+func (c *Client) UnconfirmedTransactions(ctx context.Context, limit *int) ([]types.Tx, error) {
+	txns, err := c.RPC.UnconfirmedTxs(ctx, limit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch unconfirmed transactions %+v", err)
 	}
 	return txns.Txs, nil
 }
 
-func DeserializeTransactions(txs []types.Tx) ([]decode.DecodedTx, error) {
-	decoder, err := decode.NewDecoder(decode.Options{})
+func (c *Client) DeserializeTransactions(txs []types.Tx) ([]decode.DecodedTx, error) {
+	decoder, err := decode.NewDecoder(decode.Options{
+		SigningContext: c.Codec.InterfaceRegistry.SigningContext(),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to construct decoder %+v", err)
 	}
