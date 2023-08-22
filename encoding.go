@@ -18,22 +18,23 @@ type Codec struct {
 
 func MakeCodec(moduleBasics []module.AppModuleBasic, extraCodecs []string) Codec {
 	modBasic := module.NewBasicManager(moduleBasics...)
-	encodingConfig := MakeCodecConfig()
-	std.RegisterLegacyAminoCodec(encodingConfig.Amino)
-	std.RegisterInterfaces(encodingConfig.InterfaceRegistry)
-	modBasic.RegisterLegacyAminoCodec(encodingConfig.Amino)
-	modBasic.RegisterInterfaces(encodingConfig.InterfaceRegistry)
+	encodingConfig := MakeCodecConfig(modBasic)
 
 	return encodingConfig
 }
 
-func MakeCodecConfig() Codec {
+func MakeCodecConfig(modBase module.BasicManager) Codec {
 	interfaceRegistry := types.NewInterfaceRegistry()
+	amino := codec.NewLegacyAmino()
+	std.RegisterInterfaces(interfaceRegistry)
+	std.RegisterLegacyAminoCodec(amino)
+	modBase.RegisterInterfaces(interfaceRegistry)
+	modBase.RegisterLegacyAminoCodec(amino)
 	marshaler := codec.NewProtoCodec(interfaceRegistry)
 	return Codec{
 		InterfaceRegistry: interfaceRegistry,
 		Marshaler:         marshaler,
 		TxConfig:          tx.NewTxConfig(marshaler, tx.DefaultSignModes),
-		Amino:             codec.NewLegacyAmino(),
+		Amino:             amino,
 	}
 }

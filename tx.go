@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/cometbft/cometbft/types"
-	"github.com/teamscanworks/compass/decode"
+	ctypes "github.com/cosmos/cosmos-sdk/types"
 )
 
 // Returns an array of unconfirmed transactions present in the mempool
@@ -17,22 +17,16 @@ func (c *Client) UnconfirmedTransactions(ctx context.Context, limit *int) ([]typ
 	return txns.Txs, nil
 }
 
-func (c *Client) DeserializeTransactions(txs []types.Tx) ([]decode.DecodedTx, error) {
-	decoder, err := decode.NewDecoder(decode.Options{
-		SigningContext: c.Codec.InterfaceRegistry.SigningContext(),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to construct decoder %+v", err)
-	}
-	var out = make([]decode.DecodedTx, len(txs))
+func (c *Client) DeserializeTransactions(txs []types.Tx) ([]ctypes.Tx, error) {
+	var out = make([]ctypes.Tx, len(txs))
 	for _, tx := range txs {
-		decodedTx, err := decoder.Decode(tx)
+		decodedTx, err := c.Codec.TxConfig.TxDecoder()(tx)
 		if err != nil {
 			// remove after testing
 			fmt.Printf("failed to decode tx %+v\n", err)
 			continue
 		}
-		out = append(out, *decodedTx)
+		out = append(out, decodedTx)
 	}
 	return out, nil
 }
