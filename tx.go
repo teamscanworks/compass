@@ -17,14 +17,17 @@ func (c *Client) UnconfirmedTransactions(ctx context.Context, limit *int) ([]typ
 	return txns.Txs, nil
 }
 
-func (c *Client) DeserializeTransactions(txs []types.Tx) ([]ctypes.Tx, error) {
+// if hardError == true, deserialization will fail at first error
+func (c *Client) DeserializeTransactions(txs []types.Tx, hardError bool) ([]ctypes.Tx, error) {
 	var out = make([]ctypes.Tx, 0, len(txs))
 	for _, tx := range txs {
 		decodedTx, err := c.Codec.TxConfig.TxDecoder()(tx)
-		if err != nil {
+		if err != nil && !hardError {
 			// remove after testing
 			fmt.Printf("failed to decode tx %+v\n", err)
 			continue
+		} else if err != nil && hardError {
+			return nil, fmt.Errorf("decode encountered hard error %+v", err)
 		}
 		out = append(out, decodedTx)
 	}
