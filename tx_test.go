@@ -37,14 +37,8 @@ func TestDeserializeUnconfirmedTxCosmosHub(t *testing.T) {
 	require.NoError(t, err)
 	txs, err := client.UnconfirmedTransactions(context.Background(), nil)
 	require.NoError(t, err)
-	// if no txs found, read from test file
-	if len(txs) == 0 {
-		for _, tx := range jOut.Result.Txs {
-			txs = append(txs, []byte(tx))
-		}
-	}
 
-	decodedTxs, err := client.DeserializeTransactions(txs, false)
+	decodedTxs, err := client.DeserializeTransactions(txs, true)
 	require.NoError(t, err)
 	for _, tx := range decodedTxs {
 		t.Log("tx ", tx)
@@ -73,9 +67,10 @@ func TestDeserializeUnconfirmedTxStride(t *testing.T) {
 		}
 	}
 
-	decodedTxs, err := client.DeserializeTransactions(txs, false)
+	decodedTxs, err := client.DeserializeTransactions(txs, true)
 	require.NoError(t, err)
 	for _, tx := range decodedTxs {
 		t.Log("tx ", tx)
 	}
+	panic("k")
 }
