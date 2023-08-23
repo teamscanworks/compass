@@ -36,10 +36,9 @@ func (am AnyMapMessage) ProtoMessage() {
 }
 
 // do we need this??
-//
-//	func (am AnyMapMessage) Descriptor() ([]byte, []int) {
-//		return nil, nil
-//	}
+func (am AnyMapMessage) Descriptor() ([]byte, []int) {
+	return nil, nil
+}
 func NewAnyInterfaceRegistry(registry types.InterfaceRegistry) types.InterfaceRegistry {
 	return &AnyInterfaceRegistry{registry}
 }
