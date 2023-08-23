@@ -19,13 +19,15 @@ func (c *Client) UnconfirmedTransactions(ctx context.Context, limit *int) ([]typ
 
 func (c *Client) DeserializeTransactions(txs []types.Tx) ([]ctypes.Tx, error) {
 	var out = make([]ctypes.Tx, len(txs))
+	decoder := DefaultTxDecoder(c.cctx.Codec)
 	for _, tx := range txs {
-		decodedTx, err := c.Codec.TxConfig.TxDecoder()(tx)
+		decodedTx, err := decoder(tx)
 		if err != nil {
 			// remove after testing
 			fmt.Printf("failed to decode tx %+v\n", err)
 			continue
 		}
+		fmt.Println("tx", decodedTx)
 		out = append(out, decodedTx)
 	}
 	return out, nil
