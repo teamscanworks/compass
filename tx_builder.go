@@ -146,7 +146,11 @@ func (w *wrapper) getAuthInfoBytes() []byte {
 
 func (w *wrapper) initSignersAndMsgsV2() error {
 	var err error
-	w.signers, w.msgsV2, err = w.tx.GetSigners(w.cdc)
+	w.tx.GetSigners()
+	w.msgsV2, err = w.GetMsgsV2()
+	for _, signer := range w.tx.GetSigners() {
+		w.signers = append(w.signers, signer.Bytes())
+	}
 	return err
 }
 
@@ -194,11 +198,7 @@ func (w *wrapper) GetFee() sdk.Coins {
 func (w *wrapper) FeePayer() []byte {
 	feePayer := w.tx.AuthInfo.Fee.Payer
 	if feePayer != "" {
-		feePayerAddr, err := w.cdc.InterfaceRegistry().SigningContext().AddressCodec().StringToBytes(feePayer)
-		if err != nil {
-			panic(err)
-		}
-		return feePayerAddr
+		return w.FeePayer()
 	}
 
 	// use first signer as default if no payer specified
@@ -211,7 +211,7 @@ func (w *wrapper) FeePayer() []byte {
 }
 
 func (w *wrapper) FeeGranter() []byte {
-	return w.tx.FeeGranter(w.cdc)
+	return w.tx.FeeGranter()
 }
 
 func (w *wrapper) GetTip() *tx.Tip {
