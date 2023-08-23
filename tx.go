@@ -18,7 +18,7 @@ func (c *Client) UnconfirmedTransactions(ctx context.Context, limit *int) ([]typ
 }
 
 func (c *Client) DeserializeTransactions(txs []types.Tx) ([]ctypes.Tx, error) {
-	var out = make([]ctypes.Tx, len(txs))
+	var out = make([]ctypes.Tx, 0, len(txs))
 	for _, tx := range txs {
 		decodedTx, err := c.Codec.TxConfig.TxDecoder()(tx)
 		if err != nil {

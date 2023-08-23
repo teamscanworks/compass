@@ -91,7 +91,7 @@ func GetCosmosHubConfig(keyHome string, debug bool) *ClientConfig {
 	cfg := &ClientConfig{
 		Key:            "default",
 		ChainID:        "cosmoshub-4",
-		RPCAddr:        "https://cosmoshub-4.technofractal.com:443",
+		RPCAddr:        "https://cosmoshub.validator.network:443",
 		GRPCAddr:       "https://gprc.cosmoshub-4.technofractal.com:443",
 		AccountPrefix:  "cosmos",
 		KeyringBackend: "test",

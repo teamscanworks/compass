@@ -31,7 +31,7 @@ func TestDeserializeUnconfirmedTx(t *testing.T) {
 
 	logger, err := zap.NewDevelopment()
 	require.NoError(t, err)
-	cfg := compass.GetStrideConfig()
+	cfg := compass.GetCosmosHubConfig("keys", true)
 	require.NotNil(t, cfg)
 	client, err := compass.NewClient(logger, cfg, []keyring.Option{compass.DefaultSignatureOptions()})
 	require.NoError(t, err)
