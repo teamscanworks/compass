@@ -32,6 +32,19 @@ func MakeCodecConfig(modBase module.BasicManager) Codec {
 	modBase.RegisterInterfaces(anyRegistry)
 	modBase.RegisterLegacyAminoCodec(amino)
 	marshaler := codec.NewProtoCodec(anyRegistry)
+	/*
+		defaultOpts, err := tx.NewDefaultSigningOptions()
+		if err != nil {
+			panic(err)
+		}
+		txConfig, err := tx.NewTxConfigWithOptions(marshaler, tx.ConfigOptions{
+			SigningOptions:   defaultOpts,
+			EnabledSignModes: tx.DefaultSignModes,
+		})
+		if err != nil {
+			panic(err)
+		}
+	*/
 	return Codec{
 		InterfaceRegistry: anyRegistry,
 		Marshaler:         marshaler,
