@@ -35,6 +35,11 @@ func (am AnyMapMessage) ProtoMessage() {
 
 }
 
+// do we need this??
+//
+//	func (am AnyMapMessage) Descriptor() ([]byte, []int) {
+//		return nil, nil
+//	}
 func NewAnyInterfaceRegistry(registry types.InterfaceRegistry) types.InterfaceRegistry {
 	return &AnyInterfaceRegistry{registry}
 }
@@ -45,8 +50,7 @@ func (a AnyInterfaceRegistry) Resolve(typeURL string) (proto.Message, error) {
 	if err == nil {
 		return msg, nil
 	}
-
-	msg, ok := reflect.New(reflect.TypeOf(AnyMapMessage{})).Interface().(AnyMapMessage)
+	msg, ok := reflect.New(reflect.TypeOf(AnyMapMessage{})).Interface().(proto.Message)
 	if !ok {
 		return nil, fmt.Errorf("fallback resolve failed")
 	}
