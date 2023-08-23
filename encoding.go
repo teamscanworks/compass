@@ -25,14 +25,15 @@ func MakeCodec(moduleBasics []module.AppModuleBasic, extraCodecs []string) Codec
 
 func MakeCodecConfig(modBase module.BasicManager) Codec {
 	interfaceRegistry := types.NewInterfaceRegistry()
+	anyRegistry := NewAnyInterfaceRegistry(interfaceRegistry)
 	amino := codec.NewLegacyAmino()
-	std.RegisterInterfaces(interfaceRegistry)
+	std.RegisterInterfaces(anyRegistry)
 	std.RegisterLegacyAminoCodec(amino)
-	modBase.RegisterInterfaces(interfaceRegistry)
+	modBase.RegisterInterfaces(anyRegistry)
 	modBase.RegisterLegacyAminoCodec(amino)
-	marshaler := codec.NewProtoCodec(interfaceRegistry)
+	marshaler := codec.NewProtoCodec(anyRegistry)
 	return Codec{
-		InterfaceRegistry: interfaceRegistry,
+		InterfaceRegistry: anyRegistry,
 		Marshaler:         marshaler,
 		TxConfig:          tx.NewTxConfig(marshaler, tx.DefaultSignModes),
 		Amino:             amino,
